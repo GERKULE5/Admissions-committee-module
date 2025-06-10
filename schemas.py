@@ -12,6 +12,10 @@ class GroupType(str, Enum):
     COMMERCIAL = 'COMMERCIAL'  # коммерция
     EXTRAMURAL = 'EXTRAMURAL'  # заочная
 
+class Qualification(str, Enum):
+    SPECIALTY = 'SPECIALTY'    # специальность СПО
+    PROFESSION = 'PROFESSION'  # профессия СПО
+
 
 # ответ API
 class SpecialtySchema(BaseModel):
@@ -27,3 +31,12 @@ class SpecialtySchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SpecialtyRatingSchema(BaseModel):
+    code: str
+    name: str
+    plan: int
+    statement_quantity: int
+    competition: float
+    base: AcademicBase
+    skill: Qualification

@@ -265,21 +265,87 @@ def parse_extramural_table(table, extramular_costs_data):
     return extramural_table_data
 data3 = parse_extramural_table(extramural_table, extramular_costs_data=parse_cost_of_training_extramural())
 
-
-
 all_data = data1 + data2 + data3
 
-print('-----------------------------------------NOT FULL-----------------------------------')
-for item in data1:
-    print(f'{item}\n')
-print('-----------------------------------------FULL-----------------------------------')
-for item in data2:
-    print(f'{item}\n')
+def parse_rating():
+    rating_table_data = []
+    current_base = 'None'
+    current_qualification = 'None'
 
-print('-----------------------------------------EXTRAMURAL-----------------------------------')
-for item in data3:
-    print(f'{item}\n')
-result = parse_cost_of_training_intramural()
-print(result)
-result2 = parse_cost_of_training_extramural()
-print(result2)
+    rating_url = 'http://nke.ru/applicants/the_admissions_committee/reyting-abiturientov.php'
+    rating_response = requests.get(rating_url)
+    rating_soup = BeautifulSoup(rating_response.text, 'html.parser')
+
+    rating_main_table = rating_soup.find('table')
+    rating_tbody = rating_main_table.find('tbody')
+    rows = rating_tbody.find_all('tr')[1:]
+
+    for row in rows:
+        cells = row.find_all('td')
+        values = []
+        for cell in cells:
+            
+            if cell.get_text(strip=True).lower() == 'на базе 9кл., специальности спо':
+                current_base = 'NOT_FULL'
+                current_qualification = 'SPECIALTY'
+                continue
+                
+            if cell.get_text(strip=True).lower() == 'на базе 11кл., специальности спо':
+                current_base = 'FULL'
+                current_qualification = 'SPECIALTY'
+                continue
+
+            if cell.get_text(strip=True).lower() == 'на базе 9кл., профессия':
+                current_base = 'NOT_FULL'
+                current_qualification = 'PROFESSION'
+                continue
+            
+            values.append(cell.get_text(strip=True))
+
+        if len(values)<1:
+            continue
+        
+        code_name = values[0]
+        code = code_name[:8]
+        name = code_name[8:].lstrip()
+        plan = int(values[1])
+        statement_quantity = int(values[2])
+        competition = float(values[3])
+
+        item = {
+            'code': code,
+            'name': name,
+            'plan': plan,
+            'statement_quantity': statement_quantity,
+            'competition': competition,
+            'base': current_base,
+            'skill': current_qualification
+        }
+        rating_table_data.append(item)
+    return rating_table_data
+    
+rating_data = parse_rating()
+print(rating_data)
+
+
+            
+        
+
+
+
+
+
+# print('-----------------------------------------NOT FULL-----------------------------------')
+# for item in data1:
+#     print(f'{item}\n')
+# print('-----------------------------------------FULL-----------------------------------')
+# for item in data2:
+#     print(f'{item}\n')
+
+# print('-----------------------------------------EXTRAMURAL-----------------------------------')
+# for item in data3:
+#     print(f'{item}\n')
+# result = parse_cost_of_training_intramural()
+# print(result)
+# result2 = parse_cost_of_training_extramural()
+# print(result2)

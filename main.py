@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from typing import Optional
-from schemas import AcademicBase, GroupType, SpecialtySchema
-from parser import all_data
+from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema
+from parser import all_data, rating_data
 
 
 app = FastAPI()
@@ -31,3 +31,28 @@ def get_specialty_by_code(specialty_code: str):
         raise HTTPException(status_code=400, detail=f"Specialty {specialty_code} not found")
 
     return result
+
+@app.get('/specialties/rating/', response_model=list[SpecialtyRatingSchema])
+def get_specialties_rating(
+    base: Optional[AcademicBase] = None,
+    current_qualification: Optional[Qualification] = None
+):
+    filtered_rating = rating_data
+    
+    if base:
+        filtered_rating = [item for item in filtered_rating if item['base'] == base.value]
+
+    if current_qualification: 
+        filtered_rating = [item for item in filtered_rating if item['skill'] ==  current_qualification.value]
+
+    return filtered_rating
+
+# @app.get('/specialties/rating/{specialty_code}', response_model=SpecialtyRatingSchema)
+# def get_specialty_rating_by_code(specialty_code: str):
+
+#     result_rating = [item for item in rating_data if item['code'] == specialty_code]
+
+#     if not result_rating:
+#         raise HTTPException(status_code=400, detail=f"Specialty rating {specialty_code} not found")
+
+#     return result_rating
