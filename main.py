@@ -5,17 +5,16 @@ from typing import Optional
 import os
 from dotenv import load_dotenv
 
-# === Загрузка переменных окружения ===
+
 load_dotenv()
 
-# === FastAPI с поддержкой безопасности ===
+
 security_scheme = HTTPBearer()
 app = FastAPI()
 
-# === Токен из .env ===
+
 TOKEN = os.getenv("TOKEN")
 
-# === Проверка токена ===
 def verify_static_token(request: Request):
     auth_header = request.headers.get("Authorization")
     
@@ -35,7 +34,7 @@ def verify_static_token(request: Request):
     
     return token
 
-# === Пример маршрута с безопасностью ===
+
 from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema
 from parser import all_data, rating_data
 
