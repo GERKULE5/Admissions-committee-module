@@ -1,103 +1,64 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
-from datetime import datetime, timedelta
-import jwt
-from jwt.exceptions import InvalidTokenError
-from pydantic import BaseModel
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.security import HTTPBearer
 from typing import Optional
-
 
 import os
 from dotenv import load_dotenv
 
+# === Загрузка переменных окружения ===
+load_dotenv()
 
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-
-
+# === FastAPI с поддержкой безопасности ===
+security_scheme = HTTPBearer()
 app = FastAPI()
 
+# === Токен из .env ===
+TOKEN = os.getenv("TOKEN")
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str
-
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except InvalidTokenError:
+# === Проверка токена ===
+def verify_static_token(request: Request):
+    auth_header = request.headers.get("Authorization")
+    
+    if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=401,
+            detail="Missing or invalid token"
         )
-
-
-@app.post("/token", response_model=TokenResponse)
-def login(
-    client_id: str = Form(...),
-    client_secret: str = Form(...)
-):
-    if client_id != CLIENT_ID or client_secret != CLIENT_SECRET:
+    
+    token = auth_header.split(" ")[1]
+    
+    if token != TOKEN:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid client credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=403,
+            detail="Invalid token"
         )
-    token = create_access_token(data={"sub": client_id})
-    return {"access_token": token, "token_type": "bearer"}
+    
+    return token
 
-
-def get_current_client(token: str = Depends(lambda x: x)):
-
-    auth = token
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    token = auth.split(" ")[1]
-    payload = verify_token(token)
-    return payload
-
-
+# === Пример маршрута с безопасностью ===
 from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema
 from parser import all_data, rating_data
 
 
-@app.get("/specialties/", response_model=list[SpecialtySchema])
+@app.get("/specialties/", response_model=list[SpecialtySchema], dependencies=[Depends(security_scheme)])
 def get_specialties(
     base: Optional[AcademicBase] = None,
     group_type: Optional[GroupType] = None,
-    _: dict = Depends(get_current_client)
+    token: str = Depends(verify_static_token)
 ):
     filtered = all_data
-    
+
     if base:
         filtered = [item for item in filtered if item['base'] == base.value]
 
-    if group_type: 
+    if group_type:
         filtered = [item for item in filtered if item['group_type'] == group_type.value]
 
     return filtered
 
 
-@app.get('/specialties/{specialty_code}', response_model=list[SpecialtySchema])
-def get_specialty_by_code(specialty_code: str, _: dict = Depends(get_current_client)):
+@app.get('/specialties/{specialty_code}', response_model=list[SpecialtySchema], dependencies=[Depends(security_scheme)])
+def get_specialty_by_code(specialty_code: str, token: str = Depends(verify_static_token)):
 
     result = [item for item in all_data if item['code'] == specialty_code]
 
@@ -107,18 +68,18 @@ def get_specialty_by_code(specialty_code: str, _: dict = Depends(get_current_cli
     return result
 
 
-@app.get('/specialties/rating/', response_model=list[SpecialtyRatingSchema])
+@app.get('/specialties/rating/', response_model=list[SpecialtyRatingSchema], dependencies=[Depends(security_scheme)])
 def get_specialties_rating(
     base: Optional[AcademicBase] = None,
     current_qualification: Optional[Qualification] = None,
-    _: dict = Depends(get_current_client)
+    token: str = Depends(verify_static_token)
 ):
     filtered_rating = rating_data
-    
+
     if base:
         filtered_rating = [item for item in filtered_rating if item['base'] == base.value]
 
-    if current_qualification: 
-        filtered_rating = [item for item in filtered_rating if item['skill'] ==  current_qualification.value]
+    if current_qualification:
+        filtered_rating = [item for item in filtered_rating if item['skill'] == current_qualification.value]
 
     return filtered_rating
