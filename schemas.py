@@ -40,3 +40,6 @@ class SpecialtyRatingSchema(BaseModel):
     competition: float
     base: AcademicBase
     skill: Qualification
+
+class EducationalLoanSchema(BaseModel):
+    loan_text: List[str]

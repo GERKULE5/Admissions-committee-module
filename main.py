@@ -1,19 +1,20 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from typing import Optional
-
 import os
 from dotenv import load_dotenv
+import asyncio
 
 
 load_dotenv()
 
 
-security_scheme = HTTPBearer()
 app = FastAPI()
+security_scheme = HTTPBearer()
 
 
 TOKEN = os.getenv("TOKEN")
+
 
 def verify_static_token(request: Request):
     auth_header = request.headers.get("Authorization")
@@ -35,8 +36,43 @@ def verify_static_token(request: Request):
     return token
 
 
-from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema
-from parser import all_data, rating_data
+
+from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema, EducationalLoanSchema
+from parser import parse_all_data, parse_rating, parse_educational_loan
+
+all_data = []
+rating_data = []
+loan_data = []
+
+
+@app.on_event("startup")
+async def startup_event():
+    global all_data, rating_data, loan_data
+    print("Start parsing")
+    all_data = parse_all_data() 
+    rating_data = parse_rating()  
+    loan_data = parse_educational_loan()  
+    print("Parsing finished")
+
+
+    asyncio.create_task(background_refresh())
+
+
+async def background_refresh():
+    global all_data
+    while True:
+        await asyncio.sleep(30 * 60) 
+        try:
+            print("Refreshing")
+            new_data = parse_all_data()
+            if new_data:
+                all_data = new_data
+                print(f"Refreshing successfuly finished")
+            else:
+                print("Refreshing cant finish")
+        except Exception as e:
+            print(f"Refreshing error: {e}")
+
 
 
 @app.get("/specialties/", response_model=list[SpecialtySchema], dependencies=[Depends(security_scheme)])
@@ -82,3 +118,11 @@ def get_specialties_rating(
         filtered_rating = [item for item in filtered_rating if item['skill'] == current_qualification.value]
 
     return filtered_rating
+
+
+@app.get('/educational_loan/', response_model=EducationalLoanSchema, dependencies=[Depends(security_scheme)])
+def get_educational_loan(token: str = Depends(verify_static_token)):
+    if not loan_data:
+        raise HTTPException(status_code=500, detail="No data found")
+    
+    return {'loan_text': loan_data}
