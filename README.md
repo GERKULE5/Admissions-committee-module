@@ -37,7 +37,7 @@ cd Admissions-committee-module
 
 ```bash
 python -m venv venv
-venv\Scripts\Activate
+venv\Scripts\activate
 ```
 
 ### 3. Подгрузите библиотеки
@@ -84,14 +84,6 @@ GET /specialties/?base=NOT_FULL&group_type=FREE
 ```
 
 ## Как завершить работу сервера?
-
-### 1. Показывает запущенные контейнеры
-
-```
-docker ps
-```
-
-### 2. Останавливает работу сервера
 
 ```
 docker stop admissions-committee-module-api
