@@ -19,7 +19,7 @@ TOKEN = os.getenv("TOKEN")
 def verify_static_token(request: Request):
     auth_header = request.headers.get("Authorization")
     
-    if not auth_header or not auth_header.startswith("Bearer "):
+    if not auth_header:
         raise HTTPException(
             status_code=401,
             detail="Missing or invalid token"
