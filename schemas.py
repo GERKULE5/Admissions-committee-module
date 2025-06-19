@@ -16,18 +16,26 @@ class Qualification(str, Enum):
     SPECIALTY = 'SPECIALTY'    # специальность СПО
     PROFESSION = 'PROFESSION'  # профессия СПО
 
+class GroupTypeSpec(BaseModel):
+    type: GroupType
+    base: AcademicBase
+    years: int
+    places: int
+    cost: Optional[int] = None
+    minScore: Optional[float] = None
+
 
 # ответ API
 class SpecialtySchema(BaseModel):
+    id: Optional[int] = None
+    title: str
+    description: str
+    prefix: Optional[str] = None
     code: str
-    name: str
-    description: List[str]
-    base: AcademicBase
-    group_type: GroupType
-    duration_years: int
-    places: int
-    cost: Optional[int] = None
-    min_score: Optional[float] = None
+    # fullYears: Optional[int] = None
+    # notFullYears: Optional[int] = None
+    groupTypes: List[GroupTypeSpec]
+    
 
     class Config:
         from_attributes = True
@@ -36,10 +44,10 @@ class SpecialtyRatingSchema(BaseModel):
     code: str
     name: str
     plan: int
-    statement_quantity: int
+    statementQuantity: int
     competition: float
     base: AcademicBase
     skill: Qualification
 
 class EducationalLoanSchema(BaseModel):
-    loan_text: List[str]
+    loanText: str

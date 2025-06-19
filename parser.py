@@ -49,7 +49,8 @@ def parse_description(code: str):
             if "численность" in text.lower() or "основная" in text.lower():
                 break
             description.append(text)
-        return description
+            description_str = "\n".join(description)
+        return description_str if description_str else "description not found"
     except Exception as e:
         return ["Parsing error"]
 
@@ -125,9 +126,46 @@ def parse_cost_of_training_extramural(html_text=None):
 
     return extramural_costs_data
 
+def parse_min_score(base, code, html_text=None):
+    url_score = 'http://nke.ru/applicants/the_admissions_committee/minimalnyy-prokhodnoy-ball.php'
+    if html_text is None:
+        response = requests.get(url_score)
+        if response.status_code != 200:
+            raise Exception(f'Page cost of training not found: {response.status_code}')
+        html_text = response.text
+    soup = BeautifulSoup(html_text, 'html.parser')
+    score_tables = soup.find_all('table')
+    if len(score_tables) < 2:
+        return "0 tables"
+    if base == 'NOT_FULL':
+        t_body = score_tables[0].find('tbody')
+    elif base == 'FULL':
+        t_body = score_tables[1].find('tbody')
+    else:
+        return "0 not found tables"  
+
+    rows = t_body.find_all('tr')[1:] 
+
+    for row in rows:
+        cells = row.find_all('td')
+        if len(cells) < 2:
+            continue
+
+        code_name = cells[0].get_text(strip=True)
+        code_score = code_name[:8]
+
+        if code_score == code:
+            score = cells[1].get_text(strip=True)
+            return score 
+
+    return "0"
+    
+        
+
 
 def parse_table_intramural(table, base, costs_data):
 
+    id = None
     rows = table.find_all('tr')[1:]
     table_data = []
 
@@ -140,7 +178,7 @@ def parse_table_intramural(table, base, costs_data):
 
         code_name = values[0]
         code = code_name[:8]
-        name = code_name[8:].lstrip()
+        title = code_name[8:].lstrip()
         description = parse_description(code)
 
         duration_str = values[2] if len(values) > 2 else ""
@@ -149,32 +187,35 @@ def parse_table_intramural(table, base, costs_data):
 
         budget_places = int(values[3]) if len(values) > 3 and values[3].isdigit() else 0
         paid_places = int(values[4]) if len(values) > 4 and values[4].isdigit() else 0
-        min_score = 4.56
+        free_min_score = parse_min_score(base, code)
+        commercial_minscore = None
 
         if budget_places > 0:
             item = {
+                'id': id,
                 'code': code,
-                'name': name,
+                'title': title,
                 'description': description,
                 'base': base,
                 'group_type': "FREE",
-                'duration_years': years + 1,
+                'duration_years': years+1,
                 'places': budget_places,
-                'min_score': min_score
+                'min_score': free_min_score
             }
             table_data.append(item)
 
         if paid_places > 0:
             item = {
+                'id': id,
                 'code': code,
-                'name': name,
+                'title': title,
                 'description': description,
                 'base': base,
                 'group_type': "COMMERCIAL",
-                'duration_years': years + 1,
+                'duration_years': years+1,
                 'places': paid_places,
                 'cost': costs_data.get(code),
-                'min_score': min_score
+                'min_score': commercial_minscore
             }
             table_data.append(item)
 
@@ -195,7 +236,7 @@ def parse_extramural_table(table, extramural_costs_data):
 
         code_name = values[0]
         code = code_name[:8]
-        name = code_name[9:]
+        title = code_name[9:]
         description = parse_description(code)
 
         academic_base = values[1]
@@ -214,12 +255,13 @@ def parse_extramural_table(table, extramural_costs_data):
 
         if paid_places > 0:
             item = {
+                'id': id,
                 'code': code,
-                'name': name,
+                'title': title,
                 'description': description,
                 'base': base,
                 'group_type': "EXTRAMURAL",
-                'duration_years': years + 1,
+                'duration_years': years+1,
                 'places': paid_places,
                 'cost': extramural_costs_data.get(code),
                 'min_score': min_score
@@ -277,14 +319,14 @@ def parse_rating():
             name = code_name[8:].lstrip()
 
             plan = int(values[1]) if len(values) > 1 and values[1].isdigit() else 0
-            statement_quantity = int(values[2]) if len(values) > 2 and values[2].isdigit() else 0
+            statementQuantity = int(values[2]) if len(values) > 2 and values[2].isdigit() else 0
             competition = float(values[3]) if len(values) > 3 else 0.0
 
             item = {
                 'code': code,
                 'name': name,
                 'plan': plan,
-                'statement_quantity': statement_quantity,
+                'statementQuantity': statementQuantity,
                 'competition': competition,
                 'base': current_base,
                 'skill': current_qualification
@@ -315,8 +357,8 @@ def parse_educational_loan():
                 text = p.get_text(strip=True)
                 if text:
                     loan_content_data.append(text)
-
-        return loan_content_data
+        loan_content_str = "\n".join(loan_content_data)
+        return loan_content_str if loan_content else "Not found loan content"
     except Exception as e:
         print(f"Parsing loan error: {e}")
         return []
@@ -350,7 +392,8 @@ def parse_all_data():
         data2 = parse_table_intramural(intramural_full_table, base="FULL", costs_data=0)
         data3 = parse_extramural_table(extramural_table, extramural_costs_data=parse_cost_of_training_extramural())
 
-        return data1 + data2 + data3
+        main_data = data1 + data2 + data3
+        return main_data
 
     except Exception as e:
         print(f"Parsing Error: {e}")

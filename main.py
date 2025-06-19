@@ -39,6 +39,7 @@ def verify_static_token(request: Request):
 
 from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema, EducationalLoanSchema
 from parser import parse_all_data, parse_rating, parse_educational_loan
+from transformer import convert_to_specialty_schema
 
 all_data = []
 rating_data = []
@@ -77,25 +78,19 @@ async def background_refresh():
 
 @app.get("/specialties/", response_model=list[SpecialtySchema], dependencies=[Depends(security_scheme)])
 def get_specialties(
-    base: Optional[AcademicBase] = None,
-    group_type: Optional[GroupType] = None,
     token: str = Depends(verify_static_token)
 ):
-    filtered = all_data
 
-    if base:
-        filtered = [item for item in filtered if item['base'] == base.value]
+    transformed_data = convert_to_specialty_schema(all_data)
 
-    if group_type:
-        filtered = [item for item in filtered if item['group_type'] == group_type.value]
-
-    return filtered
-
+    return transformed_data
 
 @app.get('/specialties/{specialty_code}', response_model=list[SpecialtySchema], dependencies=[Depends(security_scheme)])
 def get_specialty_by_code(specialty_code: str, token: str = Depends(verify_static_token)):
 
-    result = [item for item in all_data if item['code'] == specialty_code]
+    transformed_data = convert_to_specialty_schema(all_data)
+
+    result = [item for item in transformed_data if item['code'] == specialty_code]
 
     if not result:
         raise HTTPException(status_code=400, detail=f"Specialty {specialty_code} not found")
@@ -125,4 +120,4 @@ def get_educational_loan(token: str = Depends(verify_static_token)):
     if not loan_data:
         raise HTTPException(status_code=500, detail="No data found")
     
-    return {'loan_text': loan_data}
+    return {'loanText': loan_data}
