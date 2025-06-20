@@ -128,40 +128,52 @@ def parse_cost_of_training_extramural(html_text=None):
 
 def parse_min_score(base, code, html_text=None):
     url_score = 'http://nke.ru/applicants/the_admissions_committee/minimalnyy-prokhodnoy-ball.php'
+
     if html_text is None:
         response = requests.get(url_score)
         if response.status_code != 200:
-            raise Exception(f'Page cost of training not found: {response.status_code}')
+            raise Exception(f'Page not found: {response.status_code}')
         html_text = response.text
+
     soup = BeautifulSoup(html_text, 'html.parser')
     score_tables = soup.find_all('table')
-    if len(score_tables) < 2:
-        return "0 tables"
-    if base == 'NOT_FULL':
-        t_body = score_tables[0].find('tbody')
-    elif base == 'FULL':
-        t_body = score_tables[1].find('tbody')
-    else:
-        return "0 not found tables"  
 
-    rows = t_body.find_all('tr')[1:] 
+    if len(score_tables) < 2:
+        return []  # Возвращаем пустой список, если таблиц нет
+
+    # Выбираем нужную таблицу
+    if base == 'NOT_FULL':
+        t_body = score_tables[0].find('tbody') or score_tables[0]
+        # print(t_body)
+    elif base == 'FULL':
+        t_body = score_tables[1].find('tbody') or score_tables[1]
+        # print(t_body)
+    else:
+        return []
+
+    rows = t_body.find_all('tr')# Пропускаем заголовок
+    scores = []
 
     for row in rows:
         cells = row.find_all('td')
         if len(cells) < 2:
             continue
 
-        code_name = cells[0].get_text(strip=True)
-        code_score = code_name[:8]
+        code_name = cells[1].get_text(strip=True)
+        code_from_table = code_name[:8]
+        title = code_name[8:]
+        score_cell = cells[2].get_text(strip=True)
+        # print(code_from_table, title, score_cell)
 
-        if code_score == code:
-            score = cells[1].get_text(strip=True)
-            return score 
+        # Извлекаем только код специальности
 
-    return "0"
-    
+        if code_from_table == code.strip():
+            return score_cell # Игнорируем некорректные значения
+
+    return scores  # Возвращаем список всех совпадений
         
-
+# result = parse_min_score('NOT_FULL', '09.01.03')
+# print(result)
 
 def parse_table_intramural(table, base, costs_data):
 
@@ -180,14 +192,14 @@ def parse_table_intramural(table, base, costs_data):
         code = code_name[:8]
         title = code_name[8:].lstrip()
         description = parse_description(code)
-
+        academicBase = base
         duration_str = values[2] if len(values) > 2 else ""
         match = re.search(r'(\d+)г\.', duration_str)
         years = int(match.group(1)) if match else 0
 
         budget_places = int(values[3]) if len(values) > 3 and values[3].isdigit() else 0
         paid_places = int(values[4]) if len(values) > 4 and values[4].isdigit() else 0
-        free_min_score = parse_min_score(base, code)
+        free_min_score = parse_min_score(academicBase, code)
         commercial_minscore = None
 
         if budget_places > 0:
@@ -200,7 +212,7 @@ def parse_table_intramural(table, base, costs_data):
                 'group_type': "FREE",
                 'duration_years': years+1,
                 'places': budget_places,
-                'min_score': free_min_score
+                'minScore': free_min_score
             }
             table_data.append(item)
 
@@ -215,7 +227,7 @@ def parse_table_intramural(table, base, costs_data):
                 'duration_years': years+1,
                 'places': paid_places,
                 'cost': costs_data.get(code),
-                'min_score': commercial_minscore
+                'minScore': commercial_minscore
             }
             table_data.append(item)
 
@@ -251,7 +263,7 @@ def parse_extramural_table(table, extramural_costs_data):
         years = int(match.group(1)) if match else 0
 
         paid_places = int(values[3]) if len(values) > 3 and values[3].isdigit() else 0
-        min_score = 4.55
+        min_score = None
 
         if paid_places > 0:
             item = {
@@ -264,7 +276,7 @@ def parse_extramural_table(table, extramural_costs_data):
                 'duration_years': years+1,
                 'places': paid_places,
                 'cost': extramural_costs_data.get(code),
-                'min_score': min_score
+                'minScore': min_score
             }
             extramural_table_data.append(item)
 

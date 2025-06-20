@@ -48,6 +48,3 @@ class SpecialtyRatingSchema(BaseModel):
     competition: float
     base: AcademicBase
     skill: Qualification
-
-class EducationalLoanSchema(BaseModel):
-    loanText: str

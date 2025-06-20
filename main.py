@@ -37,7 +37,7 @@ def verify_static_token(request: Request):
 
 
 
-from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema, EducationalLoanSchema
+from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema
 from parser import parse_all_data, parse_rating, parse_educational_loan
 from transformer import convert_to_specialty_schema
 
@@ -100,22 +100,14 @@ def get_specialty_by_code(specialty_code: str, token: str = Depends(verify_stati
 
 @app.get('/specialties/rating/', response_model=list[SpecialtyRatingSchema], dependencies=[Depends(security_scheme)])
 def get_specialties_rating(
-    base: Optional[AcademicBase] = None,
-    current_qualification: Optional[Qualification] = None,
     token: str = Depends(verify_static_token)
 ):
     filtered_rating = rating_data
 
-    if base:
-        filtered_rating = [item for item in filtered_rating if item['base'] == base.value]
-
-    if current_qualification:
-        filtered_rating = [item for item in filtered_rating if item['skill'] == current_qualification.value]
-
     return filtered_rating
 
 
-@app.get('/educational_loan/', response_model=EducationalLoanSchema, dependencies=[Depends(security_scheme)])
+@app.get('/educational_loan/', dependencies=[Depends(security_scheme)])
 def get_educational_loan(token: str = Depends(verify_static_token)):
     if not loan_data:
         raise HTTPException(status_code=500, detail="No data found")

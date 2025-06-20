@@ -24,9 +24,10 @@ def convert_to_specialty_schema(data_list):
 
        
             try:
-                min_score = float(item["minScore"]) if item["minScore"] and item["minScore"].isdigit() else None
-            except Exception:
-                min_score = None
+                min_score = float(item["minScore"]) if item["minScore"] else None
+            except Exception as e:
+                min_score = 0.1
+                print(e)
 
            
             group_spec = {
