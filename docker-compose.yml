@@ -1,0 +1,11 @@
+services:
+  commission_api:
+    container_name: commission_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - 80:80
+    environment:
+      TOKEN: YOUR_SECRET_TOKEN

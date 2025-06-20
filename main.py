@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from typing import Optional
@@ -113,3 +114,7 @@ def get_educational_loan(token: str = Depends(verify_static_token)):
         raise HTTPException(status_code=500, detail="No data found")
     
     return {'loanText': loan_data}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=80)
