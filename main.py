@@ -41,40 +41,41 @@ def verify_static_token(request: Request):
 from schemas import AcademicBase, GroupType, Qualification, SpecialtySchema, SpecialtyRatingSchema
 from parser import parse_all_data, parse_rating, parse_educational_loan
 from transformer import convert_to_specialty_schema
+from scheduler import start_scheduler
 
 all_data = []
 rating_data = []
 loan_data = []
 
 
+
 @app.on_event("startup")
 async def startup_event():
+    start_scheduler()
     global all_data, rating_data, loan_data
     print("Start parsing")
     all_data = parse_all_data() 
     rating_data = parse_rating()  
     loan_data = parse_educational_loan()  
+   
     print("Parsing finished")
 
-
     asyncio.create_task(background_refresh())
-
 
 async def background_refresh():
     global all_data
     while True:
-        await asyncio.sleep(30 * 60) 
+        await asyncio.sleep(30*60) 
         try:
             print("Refreshing")
             new_data = parse_all_data()
+            
             if new_data:
                 all_data = new_data
-                print(f"Refreshing successfuly finished")
-            else:
-                print("Refreshing cant finish")
+
+            print(f"Refreshing successfuly finished")
         except Exception as e:
             print(f"Refreshing error: {e}")
-
 
 
 @app.get("/specialties/", response_model=list[SpecialtySchema], dependencies=[Depends(security_scheme)])
@@ -110,7 +111,7 @@ def get_specialties_rating(
 
 @app.get('/educational_loan/', dependencies=[Depends(security_scheme)])
 def get_educational_loan(token: str = Depends(verify_static_token)):
-    if not loan_data:
+    if loan_data is None    :
         raise HTTPException(status_code=500, detail="No data found")
     
     return {'loanText': loan_data}

@@ -29,7 +29,7 @@ class GroupTypeSpec(BaseModel):
 class SpecialtySchema(BaseModel):
     id: Optional[int] = None
     title: str
-    description: str
+    description: Optional[str] = None
     prefix: Optional[str] = None
     code: str
     # fullYears: Optional[int] = None

@@ -36,7 +36,7 @@ def convert_to_specialty_schema(data_list):
                 "years": item["duration_years"],
                 "places": item["places"],
                 "cost": item.get("cost"),
-                "minScore": min_score
+                "minScore": item["minScore"]
             }
 
            
@@ -64,4 +64,3 @@ def convert_to_specialty_schema(data_list):
 
     
     return result
-
