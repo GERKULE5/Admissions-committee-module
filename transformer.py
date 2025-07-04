@@ -6,8 +6,21 @@ def convert_to_specialty_schema(data_list):
 
     
     for item in data_list:
-       
-        key = (item['code'], item['title'], item['description'])
+        code = item.get("code")
+        title = item.get("title")
+        description = item.get("description", "")
+
+        if not code:
+            print('Code is not defined')
+            continue
+        if not title:
+            print('Code is not defined')
+            continue
+        if not description:
+            print('Code is not defined')
+            continue
+        
+        key = (code, title, description)
         grouped[key].append(item)
 
     result = []
