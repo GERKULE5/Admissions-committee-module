@@ -56,7 +56,7 @@ def parse_description(code: str): #
         description_response = requests.get(description_url)
         if description_response.status_code != 200:
             logger.warning(f"Failed url: status code: {description_response.status_code}")
-            return 'Description is not found'
+            return 'Description not found'
 
         
 
